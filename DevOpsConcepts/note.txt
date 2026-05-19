@@ -1,2 +1,9 @@
 
+Here i will write important notes 
 
+git init 
+git add .
+git ststus
+git commit
+git clone <url>
+git 
