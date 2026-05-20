@@ -1,1 +1,63 @@
-class 
+trigger:
+  - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  # This must match the exact name of the connection you created in Step 1
+  azureServiceConnection: 'sc-azure-dev' 
+
+stages:
+  - stage: Plan
+    displayName: 'Terraform Init & Plan'
+    jobs:
+      - job: GeneratePlan
+        steps:
+          # 1. Install Terraform on the virtual machine
+          - task: TerraformInstaller@1
+            displayName: 'Install Terraform'
+            inputs:
+              terraformVersion: 'latest'
+
+          # 2. Initialize the working directory
+          - task: TerraformTaskV4@4
+            displayName: 'Terraform Init'
+            inputs:
+              provider: 'azurerm'
+              command: 'init'
+
+          # 3. Generate the blueprint of what will be created
+          - task: TerraformTaskV4@4
+            displayName: 'Terraform Plan'
+            inputs:
+              provider: 'azurerm'
+              command: 'plan'
+              environmentServiceNameAzureRM: $(azureServiceConnection)
+
+  - stage: Apply
+    displayName: 'Terraform Apply'
+    dependsOn: Plan
+    condition: succeeded()
+    jobs:
+      - job: ExecuteDeploy
+        steps:
+          - task: TerraformInstaller@1
+            displayName: 'Install Terraform'
+            inputs:
+              terraformVersion: 'latest'
+
+          - task: TerraformTaskV4@4
+            displayName: 'Terraform Init'
+            inputs:
+              provider: 'azurerm'
+              command: 'init'
+
+          # 4. Build the actual resources in the Azure Portal
+          - task: TerraformTaskV4@4
+            displayName: 'Terraform Apply'
+            inputs:
+              provider: 'azurerm'
+              command: 'apply'
+              environmentServiceNameAzureRM: $(azureServiceConnection)
+              commandOptions: '-auto-approve'
